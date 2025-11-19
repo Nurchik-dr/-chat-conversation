@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+    body {
+        font-family: sans-serif;
+        background-color: #f4f4f4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+    }
+
+    #chat-box {
+        width: 400px;
+        height: 400px;
+        overflow-y: auto;
+        background-color: white;
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .msg {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        background-color: #f3f3f3;
+        border-radius: 10px;
+        padding: 8px 10px;
+        margin-bottom: 10px;
+    }
+
+    .author {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    form {
+        margin-top: 15px;
+        display: flex;
+        gap: 5px;
+    }
+
+    input,
+    button {
+        padding: 8px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+
+    input {
+        flex: 1;
+    }
+</style>
+
+<body>
+    <h2>💬 Чат</h2>
+    <div id="chat-box"></div>
+    <form id="msgForm">
+        <div class="input-group">
+            <span>👤</span>
+            <input type="text" id="author" placeholder="Ваше имя" required>
+        </div>
+
+        <div class="input-group">
+            <span>💬</span>
+            <input type="text" id="message" placeholder="Сообщение..." required>
+        </div>
+
+        <button type="submit">➤</button>
+    </form>
+    <script>
+        const API_URL = "http://89.23.100.37:8000/messages";
+        const chatBox = document.getElementById("chat-box");
+        const msgForm = document.getElementById("msgForm");
+        let lastDatetime = null;
+
+        async function loadMessages() {
+            let url = API_URL;
+            if (lastDatetime) {
+                url += "?datetime=" + encodeURIComponent(lastDatetime);
+            }
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.length > 0) {
+                data.forEach(msg => addMessage(msg));
+                lastDatetime = data[data.length - 1].datetime;
+            }
+        }
+
+        function addMessage(msg) {
+            const div = document.createElement("div");
+            div.className = "msg";
+            div.innerHTML = `
+        <div class="author">${msg.author}</div>
+        <div>${msg.message}</div>
+        <div style="font-size: 0.8em; color: gray;">${new Date(msg.datetime).toLocaleString()}</div>
+      `;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        msgForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const messageData = {
+                message: document.getElementById("message").value,
+                author: document.getElementById("author").value
+            };
+
+            const encoded = new URLSearchParams(messageData);
+
+            await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: encoded
+            });
+
+            document.getElementById("message").value = "";
+            await loadMessages();
+        });
+
+        loadMessages();
+        setInterval(loadMessages, 3000);
+    </script>
+</body>
+
+</html>
